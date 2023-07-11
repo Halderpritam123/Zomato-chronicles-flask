@@ -1,25 +1,20 @@
 from flask import Flask, request, jsonify
-from flask_jwt_extended import JWTManager, jwt_required, create_access_token, get_jwt_identity
 
 app = Flask(__name__)
-app.config['JWT_SECRET_KEY'] = 'your-secret-key'  # Change this to your own secret key
-jwt = JWTManager(app)
 
 # Sample data
-users = [
-    # {'name': 'John', 'email': 'john@example.com', 'password': 'password'},
-    # Add more users here
-]
+users = []
 menu = [
     {'dish_name': 'Pizza', 'dish_price': 10.99, 'availability': 'available'},
     {'dish_name': 'Burger', 'dish_price': 5.99, 'availability': 'available'},
     # Add more dishes here
 ]
-
 orders = []
+
 @app.route('/')
 def index():
     return jsonify({"msg": "Welcome to home page 🚅"})
+
 # Register route
 @app.route('/register', methods=['POST'])
 def register():
@@ -36,7 +31,7 @@ def register():
 
     new_user = {'name': name, 'email': email, 'password': password}
     users.append(new_user)
-    print(users)
+
     return jsonify({'message': 'Registration successful'}), 201
 
 # Login route
@@ -52,32 +47,12 @@ def login():
     if not user:
         return jsonify({'error': 'Invalid credentials'}), 401
 
-    access_token = create_access_token(identity=email)
-    return jsonify({'access_token': access_token}), 200
-
-
-# # Token blacklist (store revoked tokens)
-# blacklist = set()
-
-# # Logout route
-# @app.route('/logout', methods=['POST'])
-# @jwt_required()
-# def logout():
-#     jti = get_unverified_jwt()['jti']
-#     blacklist.add(jti)
-#     return jsonify({'message': 'Logout successful'}), 200
-
-# # Token blacklist check
-# @jwt.token_in_blocklist_loader
-# def check_token_in_blacklist(decrypted_token):
-#     jti = decrypted_token['jti']
-#     return jti in blacklist
+    return jsonify({'message': 'Login successful'}), 200
 
 # Logout route
 @app.route('/logout', methods=['POST'])
-@jwt_required()
 def logout():
-    # Logout functionality (e.g., removing tokens from blacklist)
+    # Perform any necessary logout functionality
     return jsonify({'message': 'Logout successful'}), 200
 
 # Menu route
@@ -87,11 +62,9 @@ def get_menu():
 
 # Menu availability update route (admin only)
 @app.route('/menu/<int:dish_id>/availability', methods=['PUT'])
-@jwt_required()
 def update_menu_availability(dish_id):
-    current_user = get_jwt_identity()
-    if current_user != 'admin':
-        return jsonify({'error': 'Unauthorized'}), 401
+    # Implement authorization logic here to check if user is an admin
+    # ...
 
     dish = next((dish for dish in menu if dish['id'] == dish_id), None)
     if not dish:
@@ -106,11 +79,9 @@ def update_menu_availability(dish_id):
 
 # Menu dish addition route (admin only)
 @app.route('/menu', methods=['POST'])
-@jwt_required()
 def add_dish_to_menu():
-    current_user = get_jwt_identity()
-    if current_user != 'admin':
-        return jsonify({'error': 'Unauthorized'}), 401
+    # Implement authorization logic here to check if user is an admin
+    # ...
 
     dish_name = request.json.get('dish_name')
     dish_price = request.json.get('dish_price')
@@ -126,11 +97,9 @@ def add_dish_to_menu():
 
 # Menu dish deletion route (admin only)
 @app.route('/menu/<int:dish_id>', methods=['DELETE'])
-@jwt_required()
 def delete_dish_from_menu(dish_id):
-    current_user = get_jwt_identity()
-    if current_user != 'admin':
-        return jsonify({'error': 'Unauthorized'}), 401
+    # Implement authorization logic here to check if user is an admin
+    # ...
 
     dish = next((dish for dish in menu if dish['id'] == dish_id), None)
     if not dish:
@@ -141,11 +110,9 @@ def delete_dish_from_menu(dish_id):
 
 # Menu dish update route (admin only)
 @app.route('/menu/<int:dish_id>', methods=['PUT'])
-@jwt_required()
 def update_dish_on_menu(dish_id):
-    current_user = get_jwt_identity()
-    if current_user != 'admin':
-        return jsonify({'error': 'Unauthorized'}), 401
+    # Implement authorization logic here to check if user is an admin
+    # ...
 
     dish = next((dish for dish in menu if dish['id'] == dish_id), None)
     if not dish:
@@ -163,35 +130,37 @@ def update_dish_on_menu(dish_id):
 
 # Order route
 @app.route('/order', methods=['GET'])
-@jwt_required()
 def get_orders():
-    current_user = get_jwt_identity()
-    user_orders = [order for order in orders if order['user'] == current_user]
-    return jsonify(user_orders), 200
+    # Implement authorization logic here if needed
+    # ...
+
+    return jsonify(orders), 200
 
 # Order creation route
 @app.route('/order', methods=['POST'])
-@jwt_required()
 def create_order():
-    current_user = get_jwt_identity()
+    # Implement authorization logic here if needed
+    # ...
+
     dish_name = request.json.get('dish_name')
     dish_price = request.json.get('dish_price')
 
     if not dish_name or not dish_price:
         return jsonify({'error': 'Missing required fields'}), 400
 
-    new_order = {'user': current_user, 'dish_name': dish_name, 'dish_price': dish_price, 'order_status': 'pending'}
+    new_order = {'dish_name': dish_name, 'dish_price': dish_price}
     orders.append(new_order)
 
     return jsonify({'message': 'Order created'}), 201
 
 # Order deletion route
 @app.route('/order/<int:order_id>', methods=['DELETE'])
-@jwt_required()
 def delete_order(order_id):
-    current_user = get_jwt_identity()
+    # Implement authorization logic here if needed
+    # ...
+
     order = next((order for order in orders if order['id'] == order_id), None)
-    if not order or order['user'] != current_user:
+    if not order:
         return jsonify({'error': 'Order not found'}), 404
 
     orders.remove(order)
@@ -199,11 +168,9 @@ def delete_order(order_id):
 
 # Order status update route (admin only)
 @app.route('/order/<int:order_id>/status', methods=['PUT'])
-@jwt_required()
 def update_order_status(order_id):
-    current_user = get_jwt_identity()
-    if current_user != 'admin':
-        return jsonify({'error': 'Unauthorized'}), 401
+    # Implement authorization logic here to check if user is an admin
+    # ...
 
     order = next((order for order in orders if order['id'] == order_id), None)
     if not order:
@@ -215,6 +182,7 @@ def update_order_status(order_id):
 
     order['order_status'] = order_status
     return jsonify({'message': 'Order status updated'}), 200
+
 # Run the application
 if __name__ == '__main__':
     app.run(debug=True)
